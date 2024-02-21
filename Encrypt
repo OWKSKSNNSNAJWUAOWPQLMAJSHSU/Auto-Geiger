@@ -1,0 +1,283 @@
+
+for i, bot in pairs(getBots()) do
+    if getBot().name:upper() == bot.name:upper() then
+        pcallBot = i
+    end
+end
+
+initialize = {}
+reversed = 1
+local customizable = {
+    indexPrize = 0,
+    indexInitBot = 1,
+    dropX = prizeX - 1,
+    dropY = prizeY - 1
+}
+
+getBot().auto_reconnect = false
+for i =  1,customizable.indexInitBot do
+    table.insert(initialize,worldGeigerList[math.floor((pcallBot - 1) * customizable.indexInitBot + i)])
+end
+
+customizable.split = function(str, ptr)
+    if not ptr then 
+        ptr = "%s"
+    end
+    local tbl = {}
+    for string in string.gmatch(str, ptr) do
+        table.insert(tbl, string) 
+    end
+    return tbl
+end
+
+customizable.wearingGeiger = function(id)
+    world = customizable.split(geigerTake[reversed],"[^|]+")[1]
+    door = customizable.split(geigerTake[reversed],"[^|]+")[2]
+    customizable.warp(world,door,delaywarp)
+    if not nuked then
+        if not wrong then
+            for _, obj in pairs(getBot():getWorld():getObjects()) do
+                if obj.id == id then
+                    getBot():findPath(math.floor(obj.x / 32),math.floor(obj.y / 32))
+                    sleep(100)
+                    getBot():collect(2)
+                    sleep(1000)
+                    customizable.reconnect(world,door,math.floor(obj.x / 32),math.floor(obj.y / 32))
+                end
+                if getBot():getInventory():getItemCount(id) > 0  then
+                    break
+                end
+            end
+            if getBot():getInventory():getItemCount(id) > 0  then
+                getBot():moveTo(1,0)
+                sleep(100)
+                getBot():setDirection(true)
+                getBot():wear(id)
+                sleep(1000)
+                getBot():drop(id,getBot():getInventory():getItemCount(id) - 1)
+                sleep(1000)
+            end
+        else
+            wrong = false
+            print("["..pcallBot.."]Id door world Geiger is wrong, check ur id door !!")
+            getBot():stopScript()
+        end
+    else
+        nuked = false
+        print("["..pcallBot.."]World Geiger is nuked, check ur world !!")
+        getBot():stopScript()
+    end
+end
+
+customizable.storingPrize = function(threads)
+    print("["..pcallBot.."]Storing Prize")
+    world = customizable.split(geigerStorage[reversed],"[^|]+")[1]
+    door = customizable.split(geigerStorage[reversed],"[^|]+")[2]
+    customizable.warp(world,door,delaywarp)
+    if not nuked then
+        if not wrong then
+            for idx , pack in pairs(PrizeGeiger) do
+                for i,tile in pairs(getBot():getWorld():getTiles()) do
+                    if tile.fg == 0 or tile.bg == 0 then
+                        ::BACK::
+                        getBot():findPath(customizable.dropX + (customizable.indexPrize),customizable.dropY - (idx - 1))
+                        sleep(100)
+                        local count = 0
+                        customizable.reconnect(world,door,customizable.dropX + (customizable.indexPrize),customizable.dropY - (idx - 1))
+                        if customizable.dropX + (customizable.indexPrize) >= 98 then
+                            customizable.dropY = customizable.dropY - 1
+                            customizable.indexPrize = 0
+                        end
+                        getBot():setDirection(false)
+                        while getBot():getInventory():getItemCount(pack) > 0 do
+                            getBot():drop(pack,200)
+                            sleep(delaydrop)
+                            customizable.reconnect(world,door,customizable.dropX + (customizable.indexPrize),customizable.dropY - (idx - 1))
+                            count = count + 1
+                            if count >= 2 then
+                                customizable.indexPrize = customizable.indexPrize + 1
+                                goto BACK
+                            end
+                        end
+                    end
+                    if getBot():getInventory():getItemCount(pack) == 0 then
+                        break
+                    end
+                end
+            end
+        else
+            wrong = false
+            customizable.botStatics("World to storing Fire House is wrong door id, terminated sc @everyone")
+            print("World to storing Fire House is wrong door id, terminated sc")
+            getBot():stopScript()
+        end
+    else
+        nuked = false
+        customizable.botStatics("World to storing Fire House is NUKED, terminated sc @everyone")
+        print("World to storing Fire House is NUKED, terminated sc")
+        getBot():stopScript()
+    end
+end
+
+customizable.warp = function(init,id,cooldown)
+    name = init
+    if id ~= "" then
+        name = name .. "|" ..id
+    end
+    if not getBot():isInWorld(init:upper()) then
+        addEvent(Event.variantlist, function(variant, netid)
+            if variant:get(0):getString() == "OnConsoleMessage" then
+                if variant:get(1):getString():lower():find("inaccessible.") then
+                    nuked = true
+                end
+            end
+        end)
+        while not getBot():isInWorld(init:upper()) and not nuked do
+            if getBot():getPing() == 0 then
+                getBot():disconnect()
+                sleep(2000)
+            end
+            if getBot().status ~= BotStatus.online then
+                while getBot().status ~= BotStatus.online do
+                    getBot():connect()
+                    sleep(delayreconnect)
+                    if getBot().status == BotStatus.account_banned then
+                        getBot():stopScript()
+                    end
+                end
+            end
+            getBot():sendPacket(3,"action|join_request\nname|"..name.."\ninvitedWorld|0")
+            listenEvents(8)
+            sleep(cooldown)
+        end
+        removeEvents()
+        sleep(2000)
+    end
+    if getBot():isInWorld(init:upper()) then
+        if id ~= "" then
+            local stuck = 0
+            while getTile(getBot().x,getBot().y).fg == 6 and not wrong do
+                if getBot():getPing() == 0 then
+                    getBot():disconnect()
+                    sleep(4000)
+                end
+                if getBot().status ~= BotStatus.online then
+                    while getBot().status ~= BotStatus.online do
+                        getBot():connect()
+                        sleep(delayreconnect)
+                        if getBot().status == BotStatus.account_banned then
+                            getBot():stopScript()
+                        end
+                    end
+                end
+                getBot():sendPacket(3,"action|join_request\nname|"..name.."\ninvitedWorld|0")
+                sleep(cooldown)
+                stuck = stuck + 1
+                if stuck == 5 then
+                    wrong = true
+                end
+            end
+        end
+    end
+end
+
+customizable.reconnect = function(init,id,x,y)
+    if getBot():getPing() == 0 then
+        getBot():disconnect()
+        sleep(4000)
+    end
+    if not getBot():isInWorld(init:upper()) and getBot().status == BotStatus.online then
+        while not getBot():isInWorld(init:upper()) do
+            getBot():sendPacket(3,"action|join_request\nname|"..init:upper().."\ninvitedWorld|0")
+            sleep(delaywarp)
+        end
+        if id ~= "" then
+            while getTile(getBot().x,getBot().y).fg == 6 do
+                getBot():sendPacket(3,"action|join_request\nname|" ..init:upper().."|"..id:upper().."\ninvitedWorld|0")
+                sleep(delaywarp)
+            end
+        end
+        if x and y then
+            while getBot().x ~= x or getBot().y ~= y do
+                getBot():findPath(x,y)
+                sleep(150)
+            end
+        end
+    end
+    if getBot().status ~= BotStatus.online then
+        while getBot().status ~= BotStatus.online do
+            getBot():connect()
+            sleep(delayreconnect)
+            if getBot().status == BotStatus.account_banned then
+                getBot():stopScript()
+            end
+        end
+        while not getBot():isInWorld(init:upper()) do
+            getBot():sendPacket(3,"action|join_request\nname|"..init:upper().."\ninvitedWorld|0")
+            sleep(delaywarp)
+        end
+        if id ~= "" then
+            while getTile(getBot().x,getBot().y).fg == 6 do
+                getBot():sendPacket(3,"action|join_request\nname|" ..init:upper().."|"..id:upper().."\ninvitedWorld|0")
+                sleep(delaywarp)
+            end
+        end
+        if x and y then
+            while getBot().x ~= x or getBot().y ~= y do
+                getBot():findPath(x,y)
+                sleep(150)
+            end
+        end
+    end
+end
+
+customizable.realizm = function(threads)
+    for idx, val in pairs(PrizeGeiger) do
+        if getBot():getInventory():getItemCount(val) > 0 then
+            return true
+        end
+    end
+    return false
+end
+
+customizable.writeFile = function(threads)
+    local file = io.open(threads,"a")
+    file:write("Reseller Dongo WKWK")
+    file:close()
+end
+
+if Information = "Script Geiger made by Caramoy's Syndicate, Link Discord : https://discord.com/invite/fTTKW8vvuq" and Category == "Free Script (if u are buyers)" then
+    sleep(delayexecute * pcallBot)
+    if takeGeiger == "dead" then
+        while getBot():getInventory():getItemCount(2286) == 0 do
+            customizable.wearingGeiger(2286)
+            sleep(5000)
+        end
+    elseif takeGeiger == "alive" then
+        while getBot():getInventory():getItemCount(2204) == 0 do
+            customizable.wearingGeiger(2204)
+            sleep(5000)
+        end
+    end
+    while true do
+        for idx, val in ipairs(initialize) do
+            customizable.warp(val,"",delaywarp)
+            getBot().auto_geiger.enabled = true
+            if customizable.realizm(val) then
+                getBot().auto_geiger.enable = false
+                customizable.storingPrize(val)
+                customizable.warp(val,"",delaywarp)
+            else
+                getBot():findPath(math.random(5,90),53)
+                sleep(100)
+                customizable.reconnect(val,"")
+            end
+            sleep(10000)
+        end
+    end
+else
+    print("Reseller Dongoooo WKWKKW")
+    for i = 1, 50 do
+        customizable.writeFile("Reseller Script Cooking Idiot"..i)
+    end
+end
