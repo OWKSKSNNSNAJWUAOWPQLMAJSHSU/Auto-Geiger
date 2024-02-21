@@ -1,4 +1,3 @@
-
 for i, bot in pairs(getBots()) do
     if getBot().name:upper() == bot.name:upper() then
         pcallBot = i
