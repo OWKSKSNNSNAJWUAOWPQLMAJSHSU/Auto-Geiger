@@ -246,7 +246,7 @@ customizable.writeFile = function(threads)
     file:close()
 end
 
-if Information = "Script Geiger made by Caramoy's Syndicate, Link Discord : https://discord.com/invite/fTTKW8vvuq" and Category == "Free Script (if u are buyers)" then
+if Information == "Script Geiger made by Caramoy's Syndicate, Link Discord : https://discord.com/invite/fTTKW8vvuq" and Category == "Free Script (if u are buyers)" then
     sleep(delayexecute * pcallBot)
     if takeGeiger == "dead" then
         while getBot():getInventory():getItemCount(2286) == 0 do
